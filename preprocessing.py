@@ -70,8 +70,8 @@ for _, row in df.iterrows():
 
 
 input_dir = "/home/acp/datasets/SSD1/abundance"      # cartella dove hai le 224x224x121
-output_bags_dir = "/home/acp/datasets/SSD1/abundance_train/bags"
-output_labels_dir = "/home/acp/datasets/SSD1/abundance_train/labels"
+output_bags_dir = "/home/acp/datasets/abundance_train/bags"
+output_labels_dir = "/home/acp/datasets/abundance_train/labels"
 
 os.makedirs(output_bags_dir, exist_ok=True)
 os.makedirs(output_labels_dir, exist_ok=True)
