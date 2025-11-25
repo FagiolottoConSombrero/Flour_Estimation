@@ -41,7 +41,7 @@ def parse_mix_code(mix_code: str, flour_order):
     return z
 
 
-excel_path = "/Users/kolyszko/Downloads/MuestrasEtiquetas1-200v1.0.xlsx"  # path al tuo file
+excel_path = "/home/acp/datasets/MuestrasEtiquetas1-200v1.0.xlsx"  # path al tuo file
 
 df = pd.read_excel(excel_path)
 
@@ -69,9 +69,9 @@ for _, row in df.iterrows():
     id_to_z[n_muestra] = z
 
 
-input_dir = "/Users/kolyszko/Documents/spectral_farina/dataset/abundance"      # cartella dove hai le 224x224x121
-output_bags_dir = "/Users/kolyszko/Documents/spectral_farina/dataset/abundance_train/bags"
-output_labels_dir = "/Users/kolyszko/Documents/spectral_farina/dataset/abundance_train/labels"
+input_dir = "/home/acp/datasets/SSD1/abundance"      # cartella dove hai le 224x224x121
+output_bags_dir = "/home/acp/datasets/SSD1/abundance_train/bags"
+output_labels_dir = "/home/acp/datasets/SSD1/abundance_train/labels"
 
 os.makedirs(output_bags_dir, exist_ok=True)
 os.makedirs(output_labels_dir, exist_ok=True)

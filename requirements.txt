@@ -1,0 +1,5 @@
+#torch~=2.8.0
+scikit-learn~=1.6.1
+h5py~=3.14.0
+numpy~=2.0.2
+pandas~=2.3.3
