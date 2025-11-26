@@ -36,11 +36,11 @@ class HSILLPMLP(nn.Module):
         # MLP per-pixel
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         x = self.fc2(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         logits = self.fc_out(x)   # [B*P, K]
 
