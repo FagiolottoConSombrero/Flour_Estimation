@@ -8,7 +8,7 @@ class HSILLPMLP(nn.Module):
     - Input:  X [B, 121, H, W]
     - Output: logits [B, P, K] con P = H*W (pixel), K = n_classi
     """
-    def __init__(self, in_bands=121, n_classes=5, hidden_dim=256, dropout=0.1):
+    def __init__(self, in_bands=121, n_classes=5, hidden_dim=256, dropout=0.2):
         super().__init__()
         self.in_bands = in_bands
         self.n_classes = n_classes
@@ -36,11 +36,11 @@ class HSILLPMLP(nn.Module):
         # MLP per-pixel
         x = self.fc1(x)
         x = F.relu(x)
-        #x = self.dropout(x)
+        x = self.dropout(x)
 
         x = self.fc2(x)
         x = F.relu(x)
-        #x = self.dropout(x)
+        x = self.dropout(x)
 
         logits = self.fc_out(x)   # [B*P, K]
 
