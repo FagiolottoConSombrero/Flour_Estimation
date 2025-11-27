@@ -15,6 +15,7 @@ class HSILLPMLP(nn.Module):
 
         self.fc1 = nn.Linear(in_bands, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, hidden_dim)
         self.fc_out = nn.Linear(hidden_dim, n_classes)
 
         self.dropout = nn.Dropout(dropout)
@@ -36,11 +37,14 @@ class HSILLPMLP(nn.Module):
         # MLP per-pixel
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         x = self.fc2(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
+
+        x = self.fc3(x)
+        x = F.relu(x)
 
         logits = self.fc_out(x)   # [B*P, K]
 
