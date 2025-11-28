@@ -34,22 +34,18 @@ def test(
     with torch.no_grad():
         global_idx = 0
         for batch in val_loader:
-            # come nel tuo LLP.step:
             X, z = batch  # X=[B,121,16,16], z=[B,K]
 
             X = X.to(device)
             z = z.to(device)
 
-            # forward: LLP.forward -> self.model(X) -> HSILLPMLP
             logits = model(X)  # [B,256,K]
             loss = llp_kl_bag_loss(logits, z)  # KL bag-loss
 
-            # ---- predizione del bag ----
             probs = F.softmax(logits, dim=-1)  # [B,256,K]
             bag_pred = probs.mean(dim=1)  # [B,K]
 
-            # ---- metriche ----
-            pcr = model.compute_pcr(z, bag_pred)  # riuso la funzione che hai già definito
+            pcr = model.compute_pcr(z, bag_pred)
             mae_batch = (bag_pred - z).abs().mean()
 
             B = X.size(0)
@@ -63,11 +59,15 @@ def test(
             per_bag_mae = (bag_pred - z).abs().mean(dim=1)  # [B]
 
             for i in range(B):
+                # numero di farine presenti nel GT (stesso criterio di compute_pcr: z > 0)
+                n_present = (z[i] > 0).sum().item()
+
                 per_sample_records.append({
                     "idx": global_idx,
                     "mae": per_bag_mae[i].item(),
                     "pred": bag_pred[i].detach().cpu(),
                     "gt": z[i].detach().cpu(),
+                    "n_present": n_present,  # <--- aggiunto
                 })
                 global_idx += 1
 
@@ -82,26 +82,33 @@ def test(
     print(f"MAE medio         : {mean_mae:.6f}")  # se z è in [0,1], moltiplica per 100 per punti %
 
     # ============================
-    # 5 migliori e 5 peggiori bag
+    # 5 migliori e 5 peggiori bag con DUE miscele presenti
     # ============================
-    per_sample_records.sort(key=lambda d: d["mae"])  # crescente per MAE
+    # filtro solo i bag dove il GT ha esattamente 2 farine presenti
+    two_mix_records = [r for r in per_sample_records if r["n_present"] == 2]
 
-    best_k = per_sample_records[:5]
-    worst_k = per_sample_records[-5:] if len(per_sample_records) >= 5 else per_sample_records[-len(per_sample_records):]
+    if len(two_mix_records) == 0:
+        print("\n[ATTENZIONE] Nessun bag con esattamente 2 miscele trovate nel validation set.")
+        return
+
+    two_mix_records.sort(key=lambda d: d["mae"])  # crescente per MAE
+
+    best_k = two_mix_records[:5]
+    worst_k = two_mix_records[-5:] if len(two_mix_records) >= 5 else two_mix_records[-len(two_mix_records):]
     worst_k = list(reversed(worst_k))  # prima i peggiori veri
 
     def tensor_to_str(t):
         return "[" + ", ".join(f"{v:.3f}" for v in t.tolist()) + "]"
 
-    print("\n--- 5 MIGLIORI BAG (MAE più basso) ---")
+    print("\n--- 5 MIGLIORI BAG (MAE più basso, SOLO con 2 miscele presenti) ---")
     for rec in best_k:
-        print(f"\nIdx globale: {rec['idx']}, MAE: {rec['mae']:.6f}")
+        print(f"\nIdx globale: {rec['idx']}, MAE: {rec['mae']:.6f}, n_present: {rec['n_present']}")
         print(f"  pred: {tensor_to_str(rec['pred'])}")
         print(f"  gt  : {tensor_to_str(rec['gt'])}")
 
-    print("\n--- 5 PEGGIORI BAG (MAE più alto) ---")
+    print("\n--- 5 PEGGIORI BAG (MAE più alto, SOLO con 2 miscele presenti) ---")
     for rec in worst_k:
-        print(f"\nIdx globale: {rec['idx']}, MAE: {rec['mae']:.6f}")
+        print(f"\nIdx globale: {rec['idx']}, MAE: {rec['mae']:.6f}, n_present: {rec['n_present']}")
         print(f"  pred: {tensor_to_str(rec['pred'])}")
         print(f"  gt  : {tensor_to_str(rec['gt'])}")
 
