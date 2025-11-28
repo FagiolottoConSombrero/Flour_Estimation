@@ -93,7 +93,7 @@ def test(
 
     two_mix_records.sort(key=lambda d: d["mae"])  # crescente per MAE
 
-    best_k = two_mix_records[:15]
+    best_k = two_mix_records[:30]
     worst_k = two_mix_records[-5:] if len(two_mix_records) >= 5 else two_mix_records[-len(two_mix_records):]
     worst_k = list(reversed(worst_k))  # prima i peggiori veri
 
