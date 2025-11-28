@@ -70,13 +70,13 @@ class LLP(pl.LightningModule):
         bag_pred = probs.mean(dim=1)         # [B,K]
 
         # ---- metriche ----
-        pcr = self.compute_pcr(z, bag_pred)  # Present Class Recall
+        #pcr = self.compute_pcr(z, bag_pred)  # Present Class Recall
         mae = (bag_pred - z).abs().mean()
 
         # ---- logging ----
         self.log(f"{stage}_loss", loss, on_epoch=True, prog_bar=True)
-        self.log(f"{stage}_pcr", pcr, on_epoch=True, prog_bar=True)
-        self.log(f"{stage}_mae", mae, on_epoch=True, prog_bar=False)
+        #self.log(f"{stage}_pcr", pcr, on_epoch=True, prog_bar=True)
+        self.log(f"{stage}_mae", mae, on_epoch=True, prog_bar=True)
 
         return loss
 
