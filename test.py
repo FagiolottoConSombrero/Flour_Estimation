@@ -20,100 +20,77 @@ def test(
         batch_size=batch_size,
         val_ratio=0.2
     )
+    # ----- modello (LightningModule) -----
+    model = load_model(weights, device)
 
-    model = HSILLPMLP()
-    ckpt = torch.load(weights, map_location=device)
-    state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
-    model.load_state_dict(state_dict)
-    model.to(device)
-
-    model.eval()
-
-    total_mse = 0.0
+    total_loss = 0.0
+    total_pcr = 0.0
     total_mae = 0.0
-    total_pcr_num = 0.0
-    total_pcr_den_x = 0.0
-    total_pcr_den_y = 0.0
     n_samples = 0
 
-    # Per salvare errori per singola bag
-    per_sample_records = []  # lista di dict: {"idx": int, "mae": float, "pred": tensor, "gt": tensor}
+    # per salvare i singoli bag e trovare i 5 migliori/peggiori
+    per_sample_records = []  # ogni entry: {"idx": int, "mae": float, "pred": tensor, "gt": tensor}
 
     with torch.no_grad():
-        global_idx = 0  # indice progressivo dei sample nel validation set
-
+        global_idx = 0
         for batch in val_loader:
-            # Adatta questa parte in base a come il tuo Dataset restituisce i batch
-            # Es. (bags, bag_labels) oppure (inputs, labels, meta, ...)
-            inputs, bag_labels = batch  # <--- cambia se necessario
+            # come nel tuo LLP.step:
+            X, z = batch  # X=[B,121,16,16], z=[B,K]
 
-            inputs = inputs.to(device)  # [B, ...]
-            bag_labels = bag_labels.to(device)  # [B, C]
+            X = X.to(device)
+            z = z.to(device)
 
-            outputs = model(inputs)  # [B, C]
+            # forward: LLP.forward -> self.model(X) -> HSILLPMLP
+            logits = model(X)  # [B,256,K]
+            loss = llp_kl_bag_loss(logits, z)  # KL bag-loss
 
-            # metriche batch
-            mse = mse_loss(outputs, bag_labels)
-            mae = mae_metric(outputs, bag_labels)
+            # ---- predizione del bag ----
+            probs = F.softmax(logits, dim=-1)  # [B,256,K]
+            bag_pred = probs.mean(dim=1)  # [B,K]
 
-            # PCR "globale" su tutto il dataset:
-            # per calcolarlo correttamente, accumuliamo numeratore e denominatore
-            B = outputs.size(0)
+            # ---- metriche ----
+            pcr = model.compute_pcr(z, bag_pred)  # riuso la funzione che hai già definito
+            mae_batch = (bag_pred - z).abs().mean()
+
+            B = X.size(0)
             n_samples += B
 
-            # Aggiorno somme per MSE/MAE (ponderate sul batch)
-            total_mse += mse.item() * B
-            total_mae += mae.item() * B
+            total_loss += loss.item() * B
+            total_pcr += pcr.item() * B
+            total_mae += mae_batch.item() * B
 
-            # ----- accumulo per PCR globale -----
-            x = outputs.reshape(-1)
-            y = bag_labels.reshape(-1)
-            x_mean = x.mean()
-            y_mean = y.mean()
-            num = torch.sum((x - x_mean) * (y - y_mean))
-            den_x = torch.sum((x - x_mean) ** 2)
-            den_y = torch.sum((y - y_mean) ** 2)
-
-            total_pcr_num += num.item()
-            total_pcr_den_x += den_x.item()
-            total_pcr_den_y += den_y.item()
-
-            # ----- salva errori per sample (per best/worst) -----
-            # errore per bag = MAE per riga
-            per_bag_mae = torch.mean(torch.abs(outputs - bag_labels), dim=1)  # [B]
+            # errore per singolo bag: MAE per riga
+            per_bag_mae = (bag_pred - z).abs().mean(dim=1)  # [B]
 
             for i in range(B):
                 per_sample_records.append({
                     "idx": global_idx,
                     "mae": per_bag_mae[i].item(),
-                    "pred": outputs[i].detach().cpu(),
-                    "gt": bag_labels[i].detach().cpu(),
+                    "pred": bag_pred[i].detach().cpu(),
+                    "gt": z[i].detach().cpu(),
                 })
                 global_idx += 1
 
-    # metriche finali
-    mean_mse = total_mse / n_samples
+    # ----- metriche globali -----
+    mean_loss = total_loss / n_samples
+    mean_pcr = total_pcr / n_samples
     mean_mae = total_mae / n_samples
 
-    eps = 1e-8
-    mean_pcr = total_pcr_num / ((total_pcr_den_x * total_pcr_den_y) ** 0.5 + eps)
-
     print("\n=== RISULTATI VALIDAZIONE ===")
-    print(f"MSE medio : {mean_mse:.6f}")
-    print(f"MAE medio : {mean_mae:.6f}")  # se le label sono in [0,1], moltiplica per 100 per avere punti %
-    print(f"PCR medio : {mean_pcr:.4f}")
+    print(f"KL bag-loss media : {mean_loss:.6f}")
+    print(f"PCR medio         : {mean_pcr:.4f}")
+    print(f"MAE medio         : {mean_mae:.6f}")  # se z è in [0,1], moltiplica per 100 per punti %
 
     # ============================
-    # 5 migliori e 5 peggiori sample
+    # 5 migliori e 5 peggiori bag
     # ============================
-    per_sample_records.sort(key=lambda d: d["mae"])  # sort crescente per MAE
+    per_sample_records.sort(key=lambda d: d["mae"])  # crescente per MAE
 
     best_k = per_sample_records[:5]
     worst_k = per_sample_records[-5:] if len(per_sample_records) >= 5 else per_sample_records[-len(per_sample_records):]
-    worst_k = list(reversed(worst_k))  # metto prima i peggiori veri
+    worst_k = list(reversed(worst_k))  # prima i peggiori veri
 
     def tensor_to_str(t):
-        # Rappresentazione compatta
         return "[" + ", ".join(f"{v:.3f}" for v in t.tolist()) + "]"
 
     print("\n--- 5 MIGLIORI BAG (MAE più basso) ---")
