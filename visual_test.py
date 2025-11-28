@@ -229,7 +229,7 @@ if __name__ == "__main__":
     arg = argparse.ArgumentParser()
     arg.add_argument("--data_root", type=str, required=True)
     arg.add_argument("--batch_size", type=int, default=8)
-    arg.add_argument("--save_img", type=str, default="/projects/matteo/Flour_Estimation/plots")
+    arg.add_argument("--save_img", type=str, default="/plots")
     arg.add_argument("--model_weight", type=str, required=True)
     arg.add_argument("--seed", type=int, default=42)
 
