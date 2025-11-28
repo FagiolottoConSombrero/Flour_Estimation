@@ -110,3 +110,35 @@ def make_llp_loaders(data_root, batch_size=8, val_ratio=0.2):
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=os.cpu_count(), pin_memory=True)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=os.cpu_count(), pin_memory=True)
     return train_loader, val_loader
+
+
+mse_fn = nn.MSELoss(reduction="mean")
+
+
+def mse_loss(outputs, targets):
+    return mse_fn(outputs, targets)
+
+
+def mae_metric(outputs, targets):
+    """
+    MAE su tutte le classi e tutti i campioni.
+    outputs/targets: [B, C]
+    """
+    return torch.mean(torch.abs(outputs - targets))
+
+
+def pcr_metric(outputs, targets, eps=1e-8):
+    """
+    Pearson Correlation Coefficient su tutte le entry (flatten).
+    outputs/targets: [B, C]
+    """
+    x = outputs.reshape(-1)
+    y = targets.reshape(-1)
+
+    x_mean = torch.mean(x)
+    y_mean = torch.mean(y)
+
+    num = torch.sum((x - x_mean) * (y - y_mean))
+    den = torch.sqrt(torch.sum((x - x_mean) ** 2) * torch.sum((y - y_mean) ** 2) + eps)
+
+    return num / (den + eps)

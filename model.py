@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class HSILLPMLP(nn.Module):
     """
     MLP per LLP su patch HSI [B, 121, 16, 16].
