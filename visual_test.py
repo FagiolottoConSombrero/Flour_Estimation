@@ -27,7 +27,7 @@ def tensor_to_str(t: torch.Tensor) -> str:
 def test(
     data_root: str,
     batch_size: int = 8,
-    save_img: str = None,
+    save_path: str = None,
     weights: str = None,
     seed: int = 42
 ):
@@ -167,7 +167,7 @@ def test(
     plt.ylabel("MAE")
     plt.title("MAE per classe (abbondanza)")
     plt.tight_layout()
-    plt.savefig(f"{save_img}/mae_per_classe.png", dpi=300)
+    plt.savefig(f"{save_path}/mae_per_classe.png", dpi=300)
     plt.close()
 
     # ===== HEATMAP MAE PER COPPIE DI FARINE =====
@@ -194,7 +194,7 @@ def test(
                          ha="center", va="center", fontsize=8)
 
     plt.tight_layout()
-    plt.savefig(f"{save_img}/heatmap_per_classe.png", dpi=300)
+    plt.savefig(f"{save_path}/heatmap_per_classe.png", dpi=300)
     plt.close()
 
     # ============================
