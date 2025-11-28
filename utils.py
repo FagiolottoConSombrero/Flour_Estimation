@@ -31,10 +31,13 @@ def set_seed(seed=42):
 # ---------------- LightningModule ----------------
 class LLP(pl.LightningModule):
 
-    def __init__(self, lr=1e-3, num_classes=5, patience=20):
+    def __init__(self, lr=1e-3, num_classes=5, patience=20, model_type=1):
         super().__init__()
         self.save_hyperparameters()
-        self.model = HSILLPMLP(in_bands=121, n_classes=num_classes)
+        if model_type == 1:
+            self.model = HSILLPMLP(in_bands=121, n_classes=num_classes)
+        elif model_type == 2:
+            self.model = HSILSpectralCNN(in_bands=121, n_classes=num_classes)
         self.lr = lr
         self.num_classes = num_classes
         self.patience = patience
