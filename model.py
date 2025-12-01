@@ -113,15 +113,15 @@ class HSILSpectralCNN(nn.Module):
 
         # --- blocco spettrale ---
         x = self.conv1(x)
-        x = self.bn1(x)
+        #x = self.bn1(x)
         x = F.relu(x)
 
         x = self.conv2(x)
-        x = self.bn2(x)
+        #x = self.bn2(x)
         x = F.relu(x)
 
         x = self.conv3(x)
-        x = self.bn3(x)
+        #x = self.bn3(x)
         x = F.relu(x)
 
         # global average pooling lungo lo spettro: [B*P, conv_channels, 1]
@@ -131,11 +131,11 @@ class HSILSpectralCNN(nn.Module):
         # --- MLP finale per-pixel ---
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         x = self.fc2(x)
         x = F.relu(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         logits = self.fc_out(x)   # [B*P, K]
 
