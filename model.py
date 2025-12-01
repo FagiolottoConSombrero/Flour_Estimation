@@ -1,6 +1,7 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from torchinfo import summary
+from torchinfo import summary
 
 
 class HSILLPMLP(nn.Module):
@@ -88,7 +89,7 @@ class HSILSpectralCNN(nn.Module):
 
         # MLP finale per andare a K classi
         self.fc1 = nn.Linear(conv_channels, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        #self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc_out = nn.Linear(hidden_dim, n_classes)
 
         self.dropout = nn.Dropout(dropout)
@@ -113,15 +114,15 @@ class HSILSpectralCNN(nn.Module):
 
         # --- blocco spettrale ---
         x = self.conv1(x)
-        #x = self.bn1(x)
+        x = self.bn1(x)
         x = F.relu(x)
 
         x = self.conv2(x)
-        #x = self.bn2(x)
+        x = self.bn2(x)
         x = F.relu(x)
 
         x = self.conv3(x)
-        #x = self.bn3(x)
+        x = self.bn3(x)
         x = F.relu(x)
 
         # global average pooling lungo lo spettro: [B*P, conv_channels, 1]
@@ -133,8 +134,8 @@ class HSILSpectralCNN(nn.Module):
         x = F.relu(x)
         #x = self.dropout(x)
 
-        x = self.fc2(x)
-        x = F.relu(x)
+        #x = self.fc2(x)
+        #x = F.relu(x)
         #x = self.dropout(x)
 
         logits = self.fc_out(x)   # [B*P, K]
@@ -142,6 +143,8 @@ class HSILSpectralCNN(nn.Module):
         # Torna a [B, P, K]
         logits = logits.view(B, P, self.n_classes)
         return logits
+
+
 '''model = HSILSpectralCNN()
 model.eval()
 input1 = torch.randn(1, 121, 16, 16)
