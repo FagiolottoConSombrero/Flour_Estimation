@@ -22,6 +22,19 @@ def llp_kl_bag_loss(logits, z, eps=1e-8):
     return loss_per_bag.mean()
 
 
+def llp_kl_patch_loss(logits, z, eps=1e-8):
+    """
+    logits: [B, K]  output del modello per ciascun bag/patch
+    z:      [B, K]  vettori di abbondanza (proporzioni farine) per ciascun bag/patch
+    """
+    probs = F.softmax(logits, dim=-1)   # [B, K]
+    probs = probs.clamp(min=eps)
+    # cross-entropy con target soft: -sum_k z_k log p_k
+    loss_per_bag = -(z * probs.log()).sum(dim=-1)   # [B]
+    return loss_per_bag.mean()
+
+
+
 def set_seed(seed=42):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -33,11 +46,14 @@ class LLP(pl.LightningModule):
 
     def __init__(self, lr=1e-3, num_classes=5, patience=20, model_type=1):
         super().__init__()
+        self.model_type = model_type
         self.save_hyperparameters()
         if model_type == 1:
             self.model = HSILLPMLP(in_bands=121, n_classes=num_classes)
         elif model_type == 2:
             self.model = HSILSpectralCNN(in_bands=121, n_classes=num_classes)
+        elif model_type == 3:
+            self.model = HSILLP_PatchCNN(in_bands=121, n_classes=num_classes)
         self.lr = lr
         self.num_classes = num_classes
         self.patience = patience
@@ -63,7 +79,10 @@ class LLP(pl.LightningModule):
         X, z = batch  # X=[B,121,16,16]  z=[B,K]
 
         logits = self(X)                     # [B,256,5]
-        loss = llp_kl_bag_loss(logits, z)    # KL bag-loss
+        if self.model_type == 1 | self.model_type == 2:
+            loss = llp_kl_bag_loss(logits, z)    # KL bag-loss
+        else:
+            loss = llp_kl_patch_loss(logits, z)
 
         # ---- predizione del bag ----
         probs = F.softmax(logits, dim=-1)    # [B,256,K]

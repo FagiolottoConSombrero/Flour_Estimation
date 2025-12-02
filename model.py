@@ -145,6 +145,27 @@ class HSILSpectralCNN(nn.Module):
         return logits
 
 
+class HSILLP_PatchCNN(nn.Module):
+    def __init__(self, in_bands=121, n_classes=5):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(in_bands, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d(1)  # [B, 64, 1, 1]
+        )
+        self.fc = nn.Linear(64, n_classes)
+
+    def forward(self, x):
+        # x: [B, 121, H, W]
+        f = self.features(x)            # [B, 64, 1, 1]
+        f = f.view(x.size(0), -1)       # [B, 64]
+        logits = self.fc(f)             # [B, K]
+        return logits
+
+
+
 '''model = HSILSpectralCNN()
 model.eval()
 input1 = torch.randn(1, 121, 16, 16)
