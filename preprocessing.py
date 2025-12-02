@@ -69,7 +69,7 @@ for _, row in df.iterrows():
     id_to_z[n_muestra] = z
 
 
-input_dir = "/home/acp/datasets/SSD1/abundance"      # cartella dove hai le 224x224x121
+input_dir = "/home/acp/datasets/abundance"      # cartella dove hai le 224x224x121
 output_bags_dir = "/home/acp/datasets/abundance_train/bags"
 output_labels_dir = "/home/acp/datasets/abundance_train/labels"
 
