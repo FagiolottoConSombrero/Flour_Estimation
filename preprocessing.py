@@ -41,7 +41,7 @@ def parse_mix_code(mix_code: str, flour_order):
     return z
 
 
-excel_path = "/home/acp/datasets/MuestrasEtiquetas1-200v1.0.xlsx"  # path al tuo file
+excel_path = "/home/acp/datasets/flour_codes.xlsx"  # path al tuo file
 
 df = pd.read_excel(excel_path)
 

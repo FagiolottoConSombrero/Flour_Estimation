@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchinfo import summary
+#from torchinfo import summary
 
 
 class HSILLPMLP(nn.Module):
