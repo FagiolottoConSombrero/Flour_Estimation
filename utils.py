@@ -90,8 +90,6 @@ class LLP(pl.LightningModule):
 
         # ---- metriche ----
         #pcr = self.compute_pcr(z, bag_pred)  # Present Class Recall
-        print(f"shape del bag: {bag_pred.shape}")
-        print(f"shape della GT: {z.shape}")
         mae = (bag_pred - z).abs().mean()
 
         # ---- logging ----
