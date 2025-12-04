@@ -85,8 +85,8 @@ class LLP(pl.LightningModule):
             loss = llp_kl_patch_loss(logits, z)
 
         # ---- predizione del bag ----
-        probs = F.softmax(logits, dim=-1)    # [B,256,K]
-        bag_pred = probs.mean(dim=1)         # [B,K]
+        bag_pred = F.softmax(logits, dim=-1)    # [B,256,K]
+        #bag_pred = probs.mean(dim=1)         # [B,K]
 
         # ---- metriche ----
         #pcr = self.compute_pcr(z, bag_pred)  # Present Class Recall
