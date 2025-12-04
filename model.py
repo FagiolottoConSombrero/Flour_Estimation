@@ -89,7 +89,7 @@ class HSILSpectralCNN(nn.Module):
 
         # MLP finale per andare a K classi
         self.fc1 = nn.Linear(conv_channels, hidden_dim)
-        #self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc_out = nn.Linear(hidden_dim, n_classes)
 
         self.dropout = nn.Dropout(dropout)
@@ -134,9 +134,9 @@ class HSILSpectralCNN(nn.Module):
         x = F.relu(x)
         #x = self.dropout(x)
 
-        #x = self.fc2(x)
-        #x = F.relu(x)
-        #x = self.dropout(x)
+        x = self.fc2(x)
+        x = F.relu(x)
+        x = self.dropout(x)
 
         logits = self.fc_out(x)   # [B*P, K]
 
@@ -150,19 +150,24 @@ class HSILLP_PatchCNN(nn.Module):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(in_bands, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
+
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
+
             nn.AdaptiveAvgPool2d(1)  # [B, 64, 1, 1]
         )
+
         self.fc = nn.Linear(64, n_classes)
 
     def forward(self, x):
-        # x: [B, 121, H, W]
-        f = self.features(x)            # [B, 64, 1, 1]
-        f = f.view(x.size(0), -1)       # [B, 64]
-        logits = self.fc(f)             # [B, K]
+        f = self.features(x)          # [B, 64, 1, 1]
+        f = f.view(x.size(0), -1)     # [B, 64]
+        logits = self.fc(f)           # [B, K]
         return logits
+
 
 
 
