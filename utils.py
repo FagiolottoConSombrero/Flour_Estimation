@@ -34,7 +34,6 @@ def llp_kl_patch_loss(logits, z, eps=1e-8):
     return loss_per_bag.mean()
 
 
-
 def set_seed(seed=42):
     random.seed(seed)
     torch.manual_seed(seed)
