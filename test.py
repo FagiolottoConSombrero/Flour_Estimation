@@ -40,10 +40,12 @@ def test(
             z = z.to(device)
 
             logits = model(X)  # [B,256,K]
+            #loss = llp_kl_bag_loss(logits, z)
             loss = llp_kl_patch_loss(logits, z)
 
-            probs = F.softmax(logits, dim=-1)  # [B,256,K]
-            bag_pred = probs.mean(dim=1)  # [B,K]
+            #probs = F.softmax(logits, dim=-1)  # [B,256,K]
+            #bag_pred = probs.mean(dim=1)  # [B,K]
+            bag_pred = F.softmax(logits, dim=-1)
 
             #pcr = model.compute_pcr(z, bag_pred)
             mae_batch = (bag_pred - z).abs().mean()
