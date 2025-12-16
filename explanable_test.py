@@ -153,16 +153,19 @@ def test(
             # =========================================================
             # CONFUSIONE (LEAKAGE): presente -> massa su assenti
             # =========================================================
-            absent_mask = (z == 0)  # [B,K]
+            bag_pred_cpu = bag_pred.detach().cpu()
+            z_cpu = z.detach().cpu()
+            present_mask_cpu = (z_cpu > 0)  # [B,K]
+            absent_mask_cpu = (z_cpu == 0)  # [B,K]
 
             for b in range(B):
-                present_idx = torch.nonzero(present_mask[b], as_tuple=False).view(-1)
-                absent_idx  = torch.nonzero(absent_mask[b],  as_tuple=False).view(-1)
+                present_idx = torch.nonzero(present_mask_cpu[b], as_tuple=False).view(-1)
+                absent_idx = torch.nonzero(absent_mask_cpu[b], as_tuple=False).view(-1)
 
                 for k in present_idx.tolist():
                     conf_leak_count[k] += 1.0
                     if absent_idx.numel() > 0:
-                        conf_leak_sum[k, absent_idx] += bag_pred[b, absent_idx].detach().cpu().double()
+                        conf_leak_sum[k, absent_idx] += bag_pred_cpu[b, absent_idx].double()
 
             # =========================================================
             # SOTTOSTIMA (MISSING MASS): presente -> quanto manca
@@ -171,8 +174,8 @@ def test(
                 present_idx = torch.nonzero(present_mask[b], as_tuple=False).view(-1)
                 for k in present_idx.tolist():
                     miss_count[k] += 1.0
-                    miss = torch.clamp(z[b, k] - bag_pred[b, k], min=0.0)  # solo sottostima
-                    miss_sum[k] += miss.detach().cpu().double()
+                    miss = torch.clamp(z_cpu[b, k] - bag_pred_cpu[b, k], min=0.0)
+                    miss_sum[k] += miss.double()
 
     # ----- metriche globali -----
     mean_loss = total_loss / n_samples
