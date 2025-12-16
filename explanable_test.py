@@ -103,8 +103,7 @@ def test(
             # =========================================================
             # ---- predizione del bag (CORRETTA): media sulle 256 patch
             # =========================================================
-            probs = F.softmax(logits, dim=-1)     # [B,256,K]
-            bag_pred = probs.mean(dim=1)          # [B,K]
+            bag_pred = F.softmax(logits, dim=-1)
 
             # ---- metriche ----
             # pcr = model.compute_pcr(z, bag_pred)
