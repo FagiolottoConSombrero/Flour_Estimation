@@ -40,7 +40,7 @@ def test(
             z = z.to(device)
 
             logits = model(X)  # [B,256,K]
-            loss = llp_kl_bag_loss(logits, z)  # KL bag-loss
+            loss = llp_kl_patch_loss(logits, z)
 
             probs = F.softmax(logits, dim=-1)  # [B,256,K]
             bag_pred = probs.mean(dim=1)  # [B,K]

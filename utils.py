@@ -42,7 +42,6 @@ def set_seed(seed=42):
 
 # ---------------- LightningModule ----------------
 class LLP(pl.LightningModule):
-
     def __init__(self, lr=1e-3, num_classes=5, patience=20, model_type=1):
         super().__init__()
         self.model_type = model_type
