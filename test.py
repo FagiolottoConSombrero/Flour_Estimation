@@ -45,14 +45,14 @@ def test(
             probs = F.softmax(logits, dim=-1)  # [B,256,K]
             bag_pred = probs.mean(dim=1)  # [B,K]
 
-            pcr = model.compute_pcr(z, bag_pred)
+            #pcr = model.compute_pcr(z, bag_pred)
             mae_batch = (bag_pred - z).abs().mean()
 
             B = X.size(0)
             n_samples += B
 
             total_loss += loss.item() * B
-            total_pcr += pcr.item() * B
+            #total_pcr += pcr.item() * B
             total_mae += mae_batch.item() * B
 
             # errore per singolo bag: MAE per riga
@@ -73,12 +73,12 @@ def test(
 
     # ----- metriche globali -----
     mean_loss = total_loss / n_samples
-    mean_pcr = total_pcr / n_samples
+    #mean_pcr = total_pcr / n_samples
     mean_mae = total_mae / n_samples
 
     print("\n=== RISULTATI VALIDAZIONE ===")
     print(f"KL bag-loss media : {mean_loss:.6f}")
-    print(f"PCR medio         : {mean_pcr:.4f}")
+    #print(f"PCR medio         : {mean_pcr:.4f}")
     print(f"MAE medio         : {mean_mae:.6f}")  # se z è in [0,1], moltiplica per 100 per punti %
 
     # ============================
