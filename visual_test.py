@@ -75,21 +75,23 @@ def test(
 
             # forward: LLP.forward -> self.model(X) -> HSILLPMLP
             logits = model(X)                     # [B,256,K]
-            loss = llp_kl_bag_loss(logits, z)     # KL bag-loss
+            #loss = llp_kl_bag_loss(logits, z)     # KL bag-loss
+            loss = llp_kl_patch_loss(logits, z)
 
             # ---- predizione del bag ----
-            probs = F.softmax(logits, dim=-1)     # [B,256,K]
-            bag_pred = probs.mean(dim=1)          # [B,K]
+            bag_pred = F.softmax(logits, dim=-1)
+            #probs = F.softmax(logits, dim=-1)     # [B,256,K]
+            #bag_pred = probs.mean(dim=1)          # [B,K]
 
             # ---- metriche ----
-            pcr = model.compute_pcr(z, bag_pred)
+            #pcr = model.compute_pcr(z, bag_pred)
             mae_batch = (bag_pred - z).abs().mean()
 
             B = X.size(0)
             n_samples += B
 
             total_loss += loss.item() * B
-            total_pcr  += pcr.item() * B
+            #total_pcr  += pcr.item() * B
             total_mae  += mae_batch.item() * B
 
             # ----- MAE per classe -----
@@ -129,12 +131,12 @@ def test(
 
     # ----- metriche globali -----
     mean_loss = total_loss / n_samples
-    mean_pcr  = total_pcr  / n_samples
+    #mean_pcr  = total_pcr  / n_samples
     mean_mae  = total_mae  / n_samples
 
     print("\n=== RISULTATI VALIDAZIONE ===")
     print(f"KL bag-loss media : {mean_loss:.6f}")
-    print(f"PCR medio         : {mean_pcr:.4f}")
+    #print(f"PCR medio         : {mean_pcr:.4f}")
     print(f"MAE medio         : {mean_mae:.6f}")
 
     # ===== MAE per classe =====
