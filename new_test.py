@@ -6,6 +6,16 @@ from collections import defaultdict
 
 FLOUR_ORDER = ["T", "E", "C", "A", "Z"]  # wheat, spelt, rye, oat, Z
 
+
+def project_top2(p: torch.Tensor, eps: float = 1e-12):
+    # p: [B,K] (probabilità)
+    top2 = torch.topk(p, k=2, dim=1).indices            # [B,2]
+    mask = torch.zeros_like(p).scatter(1, top2, 1.0)    # [B,K]
+    p2 = p * mask
+    p2 = p2 / (p2.sum(dim=1, keepdim=True).clamp_min(eps))
+    return p2
+
+
 def kld_per_bag_from_probs(bag_pred: torch.Tensor, z: torch.Tensor, eps: float = 1e-8):
     """
     bag_pred: [B,K] probabilità (somma=1)
@@ -69,12 +79,14 @@ def test(
 
             # ---- pred per bag (media pixel) ----
             bag_pred = F.softmax(logits, dim=-1)          # [B,K]
+            bag_pred_top2 = project_top2(bag_pred)
 
             # ---- loss batch (come prima) ----
             loss = llp_kl_patch_loss(logits, z)    # scalare batch
 
             # ---- metriche batch ----
-            mae_batch = (bag_pred - z).abs().mean()
+            mae_batch = (bag_pred_top2 - z).abs().mean()
+
 
             B = X.size(0)
             n_samples += B
