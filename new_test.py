@@ -133,7 +133,7 @@ def test(
     for pair, recs in sorted(by_pair.items(), key=lambda x: x[0]):
         recs_sorted = sorted(recs, key=lambda d: d["mae"])  # ordina per MAE (puoi cambiarlo in kld se vuoi)
 
-        best = recs_sorted[:5]
+        best = recs_sorted[:25]
         worst = recs_sorted[-5:]
         worst = list(reversed(worst))
 
