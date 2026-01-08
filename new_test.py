@@ -39,11 +39,34 @@ def flour_pair_from_gt(z_row: torch.Tensor, flour_order):
     return tuple(letters)
 
 
+def select_mid_examples(recs, metric_key="mae", mid_n=5, mode="median"):
+    """
+    Seleziona mid_n record "in mezzo":
+    - mode="median": i più vicini alla mediana del metric_key
+    - mode="mean":   i più vicini alla media del metric_key
+    """
+    vals = torch.tensor([r[metric_key] for r in recs], dtype=torch.float32)
+
+    if mode == "mean":
+        center = vals.mean().item()
+    else:  # "median"
+        center = vals.median().item()
+
+    # ordina per distanza dal centro e prendi i primi mid_n
+    recs_sorted = sorted(recs, key=lambda r: abs(r[metric_key] - center))
+    return recs_sorted[:mid_n], center
+
+
 def test(
     data_root: str,
     batch_size: int = 8,
     weights: str = "",
-    seed: int = 42
+    seed: int = 42,
+    top_n: int = 5,
+    worst_n: int = 5,
+    mid_n: int = 5,
+    mid_mode: str = "median",   # "median" oppure "mean"
+    sort_metric: str = "mae"    # "mae" oppure "kld" (per ordinare best/worst)
 ):
     set_seed(seed)
 
@@ -75,18 +98,17 @@ def test(
             X = X.to(device)
             z = z.to(device)
 
-            logits = model(X)  # tipicamente [B,256,K]
+            logits = model(X)  # tipicamente [B,?,K] dipende dal modello
 
-            # ---- pred per bag (media pixel) ----
+            # ---- pred per bag ----
             bag_pred = F.softmax(logits, dim=-1)          # [B,K]
             bag_pred_top2 = project_top2(bag_pred)
 
-            # ---- loss batch (come prima) ----
+            # ---- loss batch ----
             loss = llp_kl_patch_loss(logits, z)    # scalare batch
 
-            # ---- metriche batch ----
+            # ---- metriche batch (MAE con top2) ----
             mae_batch = (bag_pred_top2 - z).abs().mean()
-
 
             B = X.size(0)
             n_samples += B
@@ -102,7 +124,6 @@ def test(
 
                 pair = None
                 if n_present == 2:
-                    # usa l'ordine farine definito in utils.py (FLOUR_ORDER)
                     pair = flour_pair_from_gt(z[i].detach().cpu(), FLOUR_ORDER)
 
                 per_sample_records.append({
@@ -125,7 +146,7 @@ def test(
     print(f"MAE medio             : {mean_mae:.6f}")
 
     # ============================
-    # TOP-5 e WORST-5 per ogni coppia (solo n_present==2)
+    # TOP / MID / WORST per coppia (solo n_present==2)
     # ============================
     two_mix_records = [r for r in per_sample_records if r["n_present"] == 2 and r["pair"] is not None]
 
@@ -133,7 +154,6 @@ def test(
         print("\n[ATTENZIONE] Nessun bag con esattamente 2 miscele trovate nel validation set.")
         return
 
-    # raggruppa per coppia
     by_pair = defaultdict(list)
     for r in two_mix_records:
         by_pair[r["pair"]].append(r)
@@ -141,25 +161,35 @@ def test(
     def tensor_to_str(t):
         return "[" + ", ".join(f"{v:.3f}" for v in t.tolist()) + "]"
 
-    print("\n=== MIGLIORI/PEGGIORI PER COPPIA (solo bag con 2 farine) ===")
+    print("\n=== MIGLIORI / NELLA MEDIA / PEGGIORI PER COPPIA (solo bag con 2 farine) ===")
     for pair, recs in sorted(by_pair.items(), key=lambda x: x[0]):
-        recs_sorted = sorted(recs, key=lambda d: d["mae"])  # ordina per MAE (puoi cambiarlo in kld se vuoi)
+        # best/worst ordinati secondo sort_metric
+        recs_sorted = sorted(recs, key=lambda d: d[sort_metric])
 
-        best = recs_sorted[:25]
-        worst = recs_sorted[-5:]
-        worst = list(reversed(worst))
+        best = recs_sorted[:top_n]
+        worst = list(reversed(recs_sorted[-worst_n:]))
+
+        # mid: vicini a mediana (o media) della metrica scelta
+        mid, center = select_mid_examples(recs, metric_key=sort_metric, mid_n=mid_n, mode=mid_mode)
 
         print(f"\n\n############################")
         print(f"COPPIA {pair}  (N={len(recs)})")
         print(f"############################")
+        print(f"Centro ({mid_mode}) su {sort_metric}: {center:.6f}")
 
-        print("\n--- TOP-5 (MAE più basso) ---")
+        print(f"\n--- TOP-{top_n} ({sort_metric} più basso) ---")
         for r in best:
             print(f"\nIdx: {r['idx']} | MAE: {r['mae']:.6f} | KLD: {r['kld']:.6f}")
             print(f"  pred: {tensor_to_str(r['pred'])}")
             print(f"  gt  : {tensor_to_str(r['gt'])}")
 
-        print("\n--- WORST-5 (MAE più alto) ---")
+        print(f"\n--- MID-{mid_n} (più vicini a {mid_mode} di {sort_metric}) ---")
+        for r in mid:
+            print(f"\nIdx: {r['idx']} | MAE: {r['mae']:.6f} | KLD: {r['kld']:.6f}")
+            print(f"  pred: {tensor_to_str(r['pred'])}")
+            print(f"  gt  : {tensor_to_str(r['gt'])}")
+
+        print(f"\n--- WORST-{worst_n} ({sort_metric} più alto) ---")
         for r in worst:
             print(f"\nIdx: {r['idx']} | MAE: {r['mae']:.6f} | KLD: {r['kld']:.6f}")
             print(f"  pred: {tensor_to_str(r['pred'])}")
@@ -172,6 +202,14 @@ if __name__ == "__main__":
     arg.add_argument("--batch_size", type=int, default=8)
     arg.add_argument("--model_weight", type=str, required=True)
     arg.add_argument("--seed", type=int, default=42)
+
+    # nuove opzioni
+    arg.add_argument("--top_n", type=int, default=5)
+    arg.add_argument("--worst_n", type=int, default=5)
+    arg.add_argument("--mid_n", type=int, default=5)
+    arg.add_argument("--mid_mode", type=str, default="median", choices=["median", "mean"])
+    arg.add_argument("--sort_metric", type=str, default="mae", choices=["mae", "kld"])
+
     args = arg.parse_args()
 
     test(
@@ -179,4 +217,9 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         weights=args.model_weight,
         seed=args.seed,
+        top_n=args.top_n,
+        worst_n=args.worst_n,
+        mid_n=args.mid_n,
+        mid_mode=args.mid_mode,
+        sort_metric=args.sort_metric,
     )
