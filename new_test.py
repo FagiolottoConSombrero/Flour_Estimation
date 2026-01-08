@@ -56,6 +56,7 @@ def select_mid_examples(recs, metric_key="mae", mid_n=5, mode="median"):
     recs_sorted = sorted(recs, key=lambda r: abs(r[metric_key] - center))
     return recs_sorted[:mid_n], center
 
+
 def top2_set_hit(p_row: torch.Tensor, z_row: torch.Tensor) -> float:
     """
     ritorna 1.0 se il set delle top-2 classi predette coincide con il set delle top-2 del GT.
@@ -75,7 +76,6 @@ def pair_mass_from_gt(p_row: torch.Tensor, z_row: torch.Tensor) -> float:
     """
     gt2 = torch.topk(z_row, k=2, dim=0).indices
     return float(p_row[gt2].sum().item())
-
 
 
 def test(
@@ -144,10 +144,10 @@ def test(
                 top2_hit = None
                 pair_mass = None
 
+                n_present = (z[i] > 0).sum().item()
                 if n_present == 2:
                     top2_hit = top2_set_hit(bag_pred[i].detach().cpu(), z[i].detach().cpu())
                     pair_mass = pair_mass_from_gt(bag_pred[i].detach().cpu(), z[i].detach().cpu())
-                n_present = (z[i] > 0).sum().item()
 
                 pair = None
                 if n_present == 2:
