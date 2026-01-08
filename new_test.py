@@ -56,6 +56,27 @@ def select_mid_examples(recs, metric_key="mae", mid_n=5, mode="median"):
     recs_sorted = sorted(recs, key=lambda r: abs(r[metric_key] - center))
     return recs_sorted[:mid_n], center
 
+def top2_set_hit(p_row: torch.Tensor, z_row: torch.Tensor) -> float:
+    """
+    ritorna 1.0 se il set delle top-2 classi predette coincide con il set delle top-2 del GT.
+    (ordine non conta)
+    """
+    pred2 = torch.topk(p_row, k=2, dim=0).indices
+    gt2   = torch.topk(z_row, k=2, dim=0).indices
+    pred2, _ = torch.sort(pred2)
+    gt2, _   = torch.sort(gt2)
+    return float(torch.equal(pred2, gt2))
+
+
+def pair_mass_from_gt(p_row: torch.Tensor, z_row: torch.Tensor) -> float:
+    """
+    somma delle probabilità predette sulle 2 classi GT (top-2 di z).
+    range [0,1]. Più è alto, più il modello sta "puntando" sulle classi giuste.
+    """
+    gt2 = torch.topk(z_row, k=2, dim=0).indices
+    return float(p_row[gt2].sum().item())
+
+
 
 def test(
     data_root: str,
@@ -120,6 +141,12 @@ def test(
             per_bag_kld = kld_per_bag_from_probs(bag_pred, z)           # [B]
 
             for i in range(B):
+                top2_hit = None
+                pair_mass = None
+
+                if n_present == 2:
+                    top2_hit = top2_set_hit(bag_pred[i].detach().cpu(), z[i].detach().cpu())
+                    pair_mass = pair_mass_from_gt(bag_pred[i].detach().cpu(), z[i].detach().cpu())
                 n_present = (z[i] > 0).sum().item()
 
                 pair = None
@@ -134,6 +161,8 @@ def test(
                     "gt": z[i].detach().cpu(),
                     "n_present": n_present,
                     "pair": pair,
+                    "top2_hit": top2_hit,
+                    "pair_mass": pair_mass,
                 })
                 global_idx += 1
 
@@ -150,6 +179,18 @@ def test(
     # ============================
     two_mix_records = [r for r in per_sample_records if r["n_present"] == 2 and r["pair"] is not None]
 
+    top2_acc = sum(r["top2_hit"] for r in two_mix_records) / len(two_mix_records)
+    pair_mass_mean = sum(r["pair_mass"] for r in two_mix_records) / len(two_mix_records)
+
+    print("\n=== METRICHE TOP-2 (solo bag con 2 farine) ===")
+    print(f"Top2-set accuracy (becco le 2 classi): {top2_acc:.4f}")
+    print(f"PairMass media (prob sulle 2 classi GT): {pair_mass_mean:.4f}")
+
+    # opzionale: quanto spesso PairMass supera una soglia
+    thr = 0.90
+    pm_at = sum(1 for r in two_mix_records if r["pair_mass"] >= thr) / len(two_mix_records)
+    print(f"PairMass@{thr:.2f}: {pm_at:.4f}")
+
     if len(two_mix_records) == 0:
         print("\n[ATTENZIONE] Nessun bag con esattamente 2 miscele trovate nel validation set.")
         return
@@ -163,6 +204,11 @@ def test(
 
     print("\n=== MIGLIORI / NELLA MEDIA / PEGGIORI PER COPPIA (solo bag con 2 farine) ===")
     for pair, recs in sorted(by_pair.items(), key=lambda x: x[0]):
+        pair_top2_acc = sum(r["top2_hit"] for r in recs) / len(recs)
+        pair_pm_mean = sum(r["pair_mass"] for r in recs) / len(recs)
+
+        print(f"Top2-set acc (coppia): {pair_top2_acc:.4f} | PairMass mean: {pair_pm_mean:.4f}")
+
         # best/worst ordinati secondo sort_metric
         recs_sorted = sorted(recs, key=lambda d: d[sort_metric])
 
