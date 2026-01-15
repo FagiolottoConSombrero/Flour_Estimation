@@ -56,11 +56,11 @@ class LLP(pl.LightningModule):
         else:
             self.input = 121
         if model_type == 1:
-            self.model = HSILLPMLP(in_bands=input, n_classes=num_classes)
+            self.model = HSILLPMLP(in_bands=self.input, n_classes=num_classes)
         elif model_type == 2:
-            self.model = HSILSpectralCNN(in_bands=input, n_classes=num_classes)
+            self.model = HSILSpectralCNN(in_bands=self.input, n_classes=num_classes)
         elif model_type == 3:
-            self.model = HSILLP_PatchCNN(in_bands=input, n_classes=num_classes)
+            self.model = HSILLP_PatchCNN(in_bands=self.input, n_classes=num_classes)
         self.lr = lr
         self.num_classes = num_classes
         self.patience = patience
