@@ -13,6 +13,8 @@ def main(
     patience_loss: int = 50,
     patience_es: int = 50,
     devices="auto",
+    use_rgb: bool = False,
+    use_ir: bool = False
 ):
 
     set_seed(seed)
@@ -25,7 +27,7 @@ def main(
     )
 
     # ----- modello LLP -----
-    model = LLP(lr=1e-3, num_classes=5, patience=patience_loss, model_type=model_type)
+    model = LLP(lr=1e-3, num_classes=5, patience=patience_loss, model_type=model_type, rgb=use_rgb, ir=use_ir)
 
     # ----- callbacks -----
     ckpt = ModelCheckpoint(dirpath=save_dir, filename="best",monitor="val_loss", mode="min", save_top_k=1)
@@ -58,6 +60,8 @@ if __name__ == "__main__":
     arg.add_argument("--patience_loss", type=int, default=50)
     arg.add_argument("--patience_early_stopping", type=int, default=100)
     arg.add_argument("--devices", type=str, default="auto")
+    arg.add_argument("--use_rgb", type=bool, default=False)
+    arg.add_argument("--use_ir", type=bool, default=False)
 
     args = arg.parse_args()
 
@@ -71,4 +75,6 @@ if __name__ == "__main__":
         patience_loss=args.patience_loss,
         patience_es=args.patience_early_stopping,
         devices=args.devices,
+        use_rgb = args.use_rgb,
+        use_ir=args.use_ir
     )
